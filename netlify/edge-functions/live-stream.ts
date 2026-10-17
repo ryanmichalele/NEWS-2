@@ -28,7 +28,8 @@ import {
  * runs ONE poll loop and fans the result out to every client it is serving.
  * Ten visitors on one isolate cost one Sanity query per tick, not ten. When the
  * last client disconnects the loop stops entirely, so an idle site costs
- * nothing.
+ * nothing, and the cadence itself backs off to POLL_SLOW_MS once nobody has
+ * been active for HOT_WINDOW_MS.
  *
  * The event payload is deliberately just the version string. The browser then
  * pulls the full article from /api/content, which keeps the merge-with-defaults
@@ -41,11 +42,28 @@ type Context = {
 };
 
 /**
- * How often an isolate asks Sanity whether anything changed. This is the
- * dominant term in end-to-end latency, so keep it low. One tiny query per
- * isolate per tick -- see POLL_COST.md note in this file's history.
+ * Poll cadence, adaptive.
+ *
+ * Measured against the live project: an origin read of the version query costs
+ * ~200ms, so the poll interval is the dominant term in detection latency and
+ * nothing below ~200ms can help. The loop schedules its next tick only after a
+ * read completes, so the real cycle is interval + ~200ms.
+ *
+ *   fast: 250 + 200 = ~450ms cycle -> ~225ms average detection
+ *   slow: 3000 + 200 = ~3200ms cycle -> ~1.6s average detection
+ *
+ * One tiny query (261 bytes) per isolate per tick, shared by every client that
+ * isolate is serving -- ten visitors cost one query, not ten.
  */
-const POLL_MS = 1_000;
+const POLL_FAST_MS = 250;
+/** Genuinely idle: nobody is editing, so nobody needs a fast answer. */
+const POLL_SLOW_MS = 3_000;
+/**
+ * Stay in fast mode for this long after any activity. Two minutes comfortably
+ * covers an editing session -- open Studio, tweak a headline, publish, fix a
+ * typo -- so a session never falls out of fast mode mid-way through.
+ */
+const HOT_WINDOW_MS = 120_000;
 /** Keeps intermediaries from reaping an idle connection. */
 const HEARTBEAT_MS = 25_000;
 /** Never let a wedged upstream stall the loop. */
@@ -73,6 +91,16 @@ let pollTimer: ReturnType<typeof setTimeout> | undefined;
 let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
 let lastVersion: string | null = null;
 let inflight: Promise<string> | null = null;
+/** Timestamp at which the isolate drops back to POLL_SLOW_MS. */
+let hotUntil = 0;
+
+function enterHotMode() {
+  hotUntil = Date.now() + HOT_WINDOW_MS;
+}
+
+function pollInterval(): number {
+  return Date.now() < hotUntil ? POLL_FAST_MS : POLL_SLOW_MS;
+}
 
 function broadcast(event: string, data: string) {
   for (const client of clients) {
@@ -86,20 +114,26 @@ function broadcast(event: string, data: string) {
   }
 }
 
+/**
+ * Built once. The version query is identical on every tick, so rebuilding the
+ * params, the headers and the URL string each time was pure overhead -- and
+ * this loop now runs up to 4x more often than it used to.
+ */
+const SANITY_HEADERS: Record<string, string> = token
+  ? { Accept: "application/json", Authorization: `Bearer ${token}` }
+  : { Accept: "application/json" };
+
+const SANITY_URL = (() => {
+  const params = new URLSearchParams({ query: VERSION_QUERY });
+  if (token) params.set("perspective", "published");
+  return `https://${projectId}.api.sanity.io/v2024-01-01/data/query/${dataset}?${params}`;
+})();
+
 async function fetchVersion(): Promise<string> {
   if (!inflight) {
-    const params = new URLSearchParams({ query: VERSION_QUERY });
-    const headers: Record<string, string> = { Accept: "application/json" };
-    if (token) {
-      params.set("perspective", "published");
-      headers.Authorization = `Bearer ${token}`;
-    }
-
-    const url = `https://${projectId}.api.sanity.io/v2024-01-01/data/query/${dataset}?${params}`;
-
     inflight = (async () => {
-      const res = await fetch(url, {
-        headers,
+      const res = await fetch(SANITY_URL, {
+        headers: SANITY_HEADERS,
         signal: AbortSignal.timeout(SANITY_TIMEOUT_MS),
       });
       if (!res.ok) throw new Error(`sanity ${res.status}`);
@@ -124,6 +158,10 @@ function schedulePoll() {
         const version = await fetchVersion();
         if (version !== lastVersion) {
           lastVersion = version;
+          // Someone just published. They are probably about to publish again,
+          // so stay fast for the rest of their session instead of dropping
+          // back to the slow cadence between their saves.
+          enterHotMode();
           broadcast("update", version);
         }
       } catch (err) {
@@ -134,7 +172,7 @@ function schedulePoll() {
         schedulePoll();
       }
     })();
-  }, POLL_MS);
+  }, pollInterval());
 }
 
 function ensureHeartbeat() {
@@ -178,6 +216,31 @@ async function sendBaseline(send: (version: string) => void) {
   send(lastVersion ?? "none");
 }
 
+/**
+ * Test seam.
+ *
+ * The hot -> cold transition takes HOT_WINDOW_MS of real time to play out, which
+ * is two minutes -- far longer than a test should run. These accessors let
+ * scripts/verify-live-stream.ts drive the scheduler's state directly instead of
+ * waiting it out, so the adaptive cadence is covered without slowing the suite.
+ *
+ * Nothing in the running system reads this.
+ */
+export const internals = {
+  get hotUntil(): number {
+    return hotUntil;
+  },
+  setHotUntil(value: number): void {
+    hotUntil = value;
+  },
+  currentInterval(): number {
+    return pollInterval();
+  },
+  POLL_FAST_MS,
+  POLL_SLOW_MS,
+  HOT_WINDOW_MS,
+};
+
 export default async (request: Request, _context: Context): Promise<Response> => {
   if (request.method !== "GET") {
     return new Response("method_not_allowed", { status: 405 });
@@ -210,6 +273,11 @@ export default async (request: Request, _context: Context): Promise<Response> =>
 
       clients.add(client);
       ensureHeartbeat();
+      // Opening the page is itself a signal that someone is here to work. An
+      // editor who left the tab open for ten minutes and then goes to publish
+      // would otherwise hit the slow cadence for their first save, which is
+      // exactly the case where fast is most wanted.
+      enterHotMode();
       schedulePoll();
 
       // Baseline. The browser already has this content from the edge injector,
