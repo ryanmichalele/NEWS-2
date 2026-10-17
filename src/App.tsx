@@ -1,19 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Turnstile from "./components/Turnstile";
 import { TURNSTILE_SITE_KEY } from "./config";
 import heroArrest from "./assets/hero-arrest.jpg";
-import { EntityProvider, EntityText } from "./sanity/EntityText";
+import { EntityProvider, EntityText, useEntityMap } from "./sanity/EntityText";
 import { useStoryContent } from "./sanity/useStoryContent";
+import { resolveEntities } from "./sanity/resolveEntities";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
 function AppShell() {
   const { article } = useStoryContent();
+  const entities = useEntityMap();
   const [email, setEmail] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [status, setStatus] = useState<Status>("idle");
+
+  useEffect(() => {
+    const title = article.seoTitle?.trim() || `CWN Live - ${article.title}`;
+    const nextTitle = resolveEntities(title, entities);
+    if (document.title !== nextTitle) document.title = nextTitle;
+    const desc = article.seoDescription?.trim() || article.dek;
+    const nextDesc = resolveEntities(desc, entities);
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta && meta.getAttribute("content") !== nextDesc) {
+      meta.setAttribute("content", nextDesc);
+    }
+  }, [article, entities]);
 
   const doubledTicker = [...article.tickerItems, ...article.tickerItems];
 

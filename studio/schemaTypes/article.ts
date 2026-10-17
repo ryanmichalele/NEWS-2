@@ -10,6 +10,21 @@ export const article = defineType({
     defineField({ name: "kicker", title: "Kicker", type: "string" }),
     defineField({ name: "title", title: "Title", type: "text", rows: 2 }),
     defineField({ name: "dek", title: "Dek", type: "text", rows: 3 }),
+    defineField({
+      name: "seoTitle",
+      title: "SEO title",
+      type: "string",
+      description:
+        "Browser tab + search result title. Bank/location/advisor names are replaced automatically. Empty = fall back to the headline.",
+    }),
+    defineField({
+      name: "seoDescription",
+      title: "SEO description",
+      type: "text",
+      rows: 3,
+      description:
+        "Search result description. Bank/location/advisor names are replaced automatically. Empty = fall back to the dek.",
+    }),
     defineField({ name: "byline", title: "Byline", type: "string" }),
     defineField({ name: "published", title: "Published", type: "string" }),
     defineField({ name: "updated", title: "Updated", type: "string" }),

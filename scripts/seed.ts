@@ -1,7 +1,7 @@
 import { createClient } from "@sanity/client";
 import { staticArticle } from "../src/data/fallback";
 
-const projectId = process.env.SANITY_PROJECT_ID || "tcitfba9";
+const projectId = process.env.SANITY_PROJECT_ID || "4w1vahgy";
 const dataset = process.env.SANITY_DATASET || "production";
 const token = process.env.SANITY_API_TOKEN;
 

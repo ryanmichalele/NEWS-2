@@ -6,7 +6,7 @@ import { createClient } from "@sanity/client";
  * public content, never a credential.
  */
 
-const projectId = process.env.SANITY_PROJECT_ID || "tcitfba9";
+const projectId = process.env.SANITY_PROJECT_ID || "4w1vahgy";
 const dataset = process.env.SANITY_DATASET || "production";
 
 const CONTENT_QUERY = `{
@@ -15,7 +15,7 @@ const CONTENT_QUERY = `{
     bankKey, locationKey, advisorKey
   },
   "article": *[_type == "article"][0]{
-    outlet, section, kicker, title, dek, byline,
+    outlet, section, kicker, title, dek, seoTitle, seoDescription, byline,
     published, updated, readTime, location, heroCaption,
     tickerItems, editorNote, bodySections, quotes, timeline,
     timelineKicker, timelineHeading,
