@@ -6,6 +6,22 @@
 [functions]
   node_bundler = "esbuild"
 
+# Live push channel. Declared BEFORE the /* injector so it handles /api/live
+# itself and the injector never sees the event stream. This has to be an edge
+# function, not a Netlify Function: Node functions die after 10s (free) / 26s
+# (max), which is far too short to hold an SSE connection open.
+[[edge_functions]]
+  function = "live-stream"
+  path = "/api/live"
+
+# Rewrites <title>, the meta description and the #cms-content payload before the
+# page is served, so a Studio edit is the *first* thing painted rather than a
+# swap a few hundred ms later. Requires SANITY_READ_TOKEN (plus the optional
+# SANITY_PROJECT_ID / SANITY_DATASET) in the Netlify env.
+[[edge_functions]]
+  function = "inject-content"
+  path = "/*"
+
 [[redirects]]
   from = "/api/subscribe"
   to = "/.netlify/functions/subscribe"

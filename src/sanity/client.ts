@@ -41,6 +41,33 @@ function toContent<T>(payload: ContentPayload): LoadedContent<T> {
  *
  * Returns null on failure so the caller keeps showing what it already has.
  */
+/**
+ * Reads the payload the netlify edge function embedded in the HTML.
+ *
+ * This runs synchronously at module-evaluation time -- before React's first
+ * render -- so when it returns a payload, the first painted frame is already
+ * the live CMS content. That is what removes the flash of the bundled copy.
+ *
+ * Returns null when the injector did not run (plain `vite dev`, or the edge
+ * function bailing out), and the caller falls back to the bundled article.
+ */
+export function readInjectedContent(): ContentPayload | null {
+  const slot = document.getElementById("cms-content");
+  const raw = slot?.textContent?.trim();
+  if (!raw || raw === "null") return null;
+
+  try {
+    const parsed = JSON.parse(raw) as ContentPayload;
+    // An empty {settings:null,article:null} is the injector failing open; treat
+    // it as no payload so the bundled copy is used instead.
+    if (!parsed || typeof parsed !== "object") return null;
+    if (parsed.article === null && parsed.settings === null) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export async function loadContent<T>(): Promise<LoadedContent<T> | null> {
   try {
     const res = await fetch("/api/content", {

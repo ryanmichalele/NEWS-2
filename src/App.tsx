@@ -1,23 +1,38 @@
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Turnstile from "./components/Turnstile";
 import { TURNSTILE_SITE_KEY } from "./config";
 import heroArrest from "./assets/hero-arrest.jpg";
-import { EntityProvider, EntityText, useEntityMap } from "./sanity/EntityText";
+import { EntityProvider, EntityText } from "./sanity/EntityText";
 import { useStoryContent } from "./sanity/useStoryContent";
 import { resolveEntities } from "./sanity/resolveEntities";
+import type { StaticArticle } from "@/data/fallback";
+import type { EntityMap } from "./sanity/resolveEntities";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-function AppShell() {
-  const { article } = useStoryContent();
-  const entities = useEntityMap();
+type StoryProps = {
+  article: StaticArticle;
+  entities: EntityMap;
+};
+
+/**
+ * `article` and `entities` arrive as props from the single useStoryContent()
+ * call in App. Calling the hook here as well used to start a second, entirely
+ * independent poll loop -- two timers, two fetches, and two copies of the
+ * entity map that could disagree mid-edit.
+ */
+function AppShell({ article, entities }: StoryProps) {
   const [email, setEmail] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [status, setStatus] = useState<Status>("idle");
 
-  useEffect(() => {
+  // Layout effect, not a normal effect: this runs after the commit but before
+  // the browser paints, so the tab title is never briefly wrong. In production
+  // the edge function has already written the correct title into the HTML and
+  // this compares equal and does nothing -- it matters on the fallback path.
+  useLayoutEffect(() => {
     const title = article.seoTitle?.trim() || `CWN Live - ${article.title}`;
     const nextTitle = resolveEntities(title, entities);
     if (document.title !== nextTitle) document.title = nextTitle;
@@ -504,10 +519,10 @@ function AppShell() {
 }
 
 export default function App() {
-  const { entities } = useStoryContent();
+  const { article, entities } = useStoryContent();
   return (
     <EntityProvider entities={entities}>
-      <AppShell />
+      <AppShell article={article} entities={entities} />
     </EntityProvider>
   );
 }
