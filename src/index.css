@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "CNN Sans", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --animate-marquee: marquee 28s linear infinite;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: #fff;
+  color: #18181b;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #dc2626;
+  color: #fff;
+}
+
+.drop-cap::first-letter {
+  float: left;
+  margin-right: 0.75rem;
+  font-size: 4.5rem;
+  line-height: 0.85;
+  font-weight: 900;
+  color: #18181b;
+}
+
+.scanlines {
+  background-image:
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+    linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+}
+
+.live-glow {
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.8);
+}
