@@ -2,8 +2,8 @@ import {
   CONTENT_QUERY,
   DEFAULT_DATASET,
   DEFAULT_PROJECT_ID,
-} from "../shared/content";
-import { injectIntoHtml, type InjectablePayload } from "../shared/inject";
+} from "../shared/content.ts";
+import { injectIntoHtml, type InjectablePayload } from "../shared/inject.ts";
 
 /**
  * Edge injector: puts live CMS content into the HTML before it reaches the

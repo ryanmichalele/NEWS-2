@@ -3,7 +3,7 @@ import {
   CONTENT_QUERY,
   DEFAULT_DATASET,
   DEFAULT_PROJECT_ID,
-} from "../shared/content";
+} from "../shared/content.ts";
 
 /**
  * Server-side proxy for the private Sanity dataset.

@@ -2,7 +2,7 @@ import {
   DEFAULT_DATASET,
   DEFAULT_PROJECT_ID,
   VERSION_QUERY,
-} from "../shared/content";
+} from "../shared/content.ts";
 
 /**
  * Live update stream (Server-Sent Events).

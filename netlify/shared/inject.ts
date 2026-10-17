@@ -3,7 +3,7 @@ import {
   FALLBACK_SETTINGS,
   resolveEntities,
   type StorySettings,
-} from "../../src/sanity/resolveEntities";
+} from "../../src/sanity/resolveEntities.ts";
 
 /**
  * Pure HTML injection. No fetch, no env, no cache -- so it can be exercised
