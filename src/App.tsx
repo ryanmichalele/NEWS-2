@@ -1,48 +1,18 @@
-import { useLayoutEffect, useState } from "react";
+import { useState } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Turnstile from "./components/Turnstile";
 import { TURNSTILE_SITE_KEY } from "./config";
 import heroArrest from "./assets/hero-arrest.jpg";
-import { EntityProvider, EntityText } from "./sanity/EntityText";
-import { useStoryContent } from "./sanity/useStoryContent";
-import { resolveEntities } from "./sanity/resolveEntities";
-import type { StaticArticle } from "@/data/fallback";
-import type { EntityMap } from "./sanity/resolveEntities";
+import { staticArticle } from "@/data/fallback";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-type StoryProps = {
-  article: StaticArticle;
-  entities: EntityMap;
-};
-
-/**
- * `article` and `entities` arrive as props from the single useStoryContent()
- * call in App. Calling the hook here as well used to start a second, entirely
- * independent poll loop -- two timers, two fetches, and two copies of the
- * entity map that could disagree mid-edit.
- */
-function AppShell({ article, entities }: StoryProps) {
+export default function App() {
+  const article = staticArticle;
   const [email, setEmail] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [status, setStatus] = useState<Status>("idle");
-
-  // Layout effect, not a normal effect: this runs after the commit but before
-  // the browser paints, so the tab title is never briefly wrong. In production
-  // the edge function has already written the correct title into the HTML and
-  // this compares equal and does nothing -- it matters on the fallback path.
-  useLayoutEffect(() => {
-    const title = article.seoTitle?.trim() || `CWN Live - ${article.title}`;
-    const nextTitle = resolveEntities(title, entities);
-    if (document.title !== nextTitle) document.title = nextTitle;
-    const desc = article.seoDescription?.trim() || article.dek;
-    const nextDesc = resolveEntities(desc, entities);
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta && meta.getAttribute("content") !== nextDesc) {
-      meta.setAttribute("content", nextDesc);
-    }
-  }, [article, entities]);
 
   const doubledTicker = [...article.tickerItems, ...article.tickerItems];
 
@@ -86,7 +56,7 @@ function AppShell({ article, entities }: StoryProps) {
             <div className="animate-marquee flex w-max gap-12 whitespace-nowrap text-xs font-bold uppercase tracking-widest">
               {doubledTicker.map((item, i) => (
                 <span key={`${item}-${i}`} className="flex items-center gap-12">
-                  <EntityText>{item}</EntityText>
+                  {item}
                   <span className="text-white/50">//</span>
                 </span>
               ))}
@@ -100,28 +70,20 @@ function AppShell({ article, entities }: StoryProps) {
         <section id="report" className="border-b-8 border-black">
           <div className="mx-auto max-w-7xl px-4 py-8 md:py-12">
             <div className="mb-4 flex flex-wrap items-center gap-3 text-[10px] font-black uppercase tracking-[0.35em]">
-              <span className="bg-red-600 px-2 py-1 text-white">
-                <EntityText>{article.kicker}</EntityText>
-              </span>
-              <span className="text-zinc-500">
-                <EntityText>{article.section}</EntityText>
-              </span>
+              <span className="bg-red-600 px-2 py-1 text-white">{article.kicker}</span>
+              <span className="text-zinc-500">{article.section}</span>
               <span className="text-zinc-300">|</span>
-              <span className="text-zinc-500">
-                <EntityText>{article.location}</EntityText>
-              </span>
+              <span className="text-zinc-500">{article.location}</span>
               <span className="text-zinc-300">|</span>
-              <span className="text-zinc-500">
-                <EntityText>{article.readTime}</EntityText>
-              </span>
+              <span className="text-zinc-500">{article.readTime}</span>
             </div>
 
             <h1 className="max-w-5xl text-4xl font-black uppercase leading-[0.95] tracking-tighter text-zinc-900 md:text-6xl lg:text-7xl">
-              <EntityText>{article.title}</EntityText>
+              {article.title}
             </h1>
 
             <p className="mt-6 max-w-3xl text-lg font-medium leading-relaxed text-zinc-600 md:text-2xl">
-              <EntityText>{article.dek}</EntityText>
+              {article.dek}
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-t-4 border-black pt-4 text-xs font-bold uppercase tracking-widest text-zinc-600">
@@ -130,11 +92,11 @@ function AppShell({ article, entities }: StoryProps) {
               </p>
               <span className="text-zinc-300">|</span>
               <p>
-                Published <EntityText>{article.published}</EntityText>
+                Published {article.published}
               </p>
               <span className="text-zinc-300">|</span>
               <p>
-                Updated <EntityText>{article.updated}</EntityText>
+                Updated {article.updated}
               </p>
             </div>
 
@@ -150,7 +112,7 @@ function AppShell({ article, entities }: StoryProps) {
                 <div className="scanlines absolute inset-0 opacity-40" />
                 <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-2 p-4 md:flex-row md:items-end md:justify-between md:p-6">
                   <p className="max-w-2xl text-sm font-medium text-white md:text-base">
-                    <EntityText>{article.heroCaption}</EntityText>
+                    {article.heroCaption}
                   </p>
                   <div className="flex items-center gap-2 self-start bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.35em] text-white">
                     <span className="h-2 w-2 rounded-full bg-white live-glow" />
@@ -170,10 +132,10 @@ function AppShell({ article, entities }: StoryProps) {
                   } ${i < 2 ? "border-b-4 border-black md:border-b-0" : ""} border-black`}
                 >
                   <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-600">
-                    <EntityText>{stat.k}</EntityText>
+                    {stat.k}
                   </p>
                   <p className="mt-1 text-xl font-black uppercase tracking-tighter md:text-2xl">
-                    <EntityText>{stat.v}</EntityText>
+                    {stat.v}
                   </p>
                 </div>
               ))}
@@ -189,7 +151,7 @@ function AppShell({ article, entities }: StoryProps) {
                 Editor’s note
               </p>
               <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-700 md:text-base">
-                <EntityText>{article.editorNote}</EntityText>
+                {article.editorNote}
               </p>
             </div>
 
@@ -197,7 +159,7 @@ function AppShell({ article, entities }: StoryProps) {
               {article.bodySections.map((section, idx) => (
                 <section key={section.heading} id={idx === 0 ? "story" : undefined}>
                   <h2 className="border-b-4 border-black pb-3 text-2xl font-black uppercase tracking-tighter md:text-3xl">
-                    <EntityText>{section.heading}</EntityText>
+                    {section.heading}
                   </h2>
                   <div className="mt-6 space-y-5 text-base leading-relaxed text-zinc-700 md:text-lg">
                     {section.paragraphs.map((paragraph, pIdx) => (
@@ -205,7 +167,7 @@ function AppShell({ article, entities }: StoryProps) {
                         key={paragraph.slice(0, 40)}
                         className={idx === 0 && pIdx === 0 ? "drop-cap" : ""}
                       >
-                        <EntityText>{paragraph}</EntityText>
+                        {paragraph}
                       </p>
                     ))}
                   </div>
@@ -221,10 +183,10 @@ function AppShell({ article, entities }: StoryProps) {
                   className="border-l-8 border-red-600 bg-zinc-100 p-6 md:p-8"
                 >
                   <p className="text-xl font-black leading-tight tracking-tight text-zinc-900 md:text-2xl">
-                    “<EntityText>{quote.text}</EntityText>”
+                    “{quote.text}”
                   </p>
                   <footer className="mt-4 text-[10px] font-black uppercase tracking-[0.35em] text-zinc-500">
-                    — <EntityText>{quote.source}</EntityText>
+                    — {quote.source}
                   </footer>
                 </blockquote>
               ))}
@@ -235,10 +197,10 @@ function AppShell({ article, entities }: StoryProps) {
               <div className="mb-8 flex items-end justify-between gap-4 border-b-8 border-black pb-4">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-600">
-                    <EntityText>{article.timelineKicker}</EntityText>
+                    {article.timelineKicker}
                   </p>
                   <h2 className="mt-2 text-3xl font-black uppercase tracking-tighter md:text-4xl">
-                    <EntityText>{article.timelineHeading}</EntityText>
+                    {article.timelineHeading}
                   </h2>
                 </div>
               </div>
@@ -247,13 +209,13 @@ function AppShell({ article, entities }: StoryProps) {
                   <li key={item.title} className="relative pb-10 last:pb-0">
                     <span className="absolute -left-[42px] top-1 flex h-5 w-5 items-center justify-center rounded-full border-4 border-black bg-red-600" />
                     <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-600">
-                      <EntityText>{item.date}</EntityText>
+                      {item.date}
                     </p>
                     <h3 className="mt-1 text-xl font-black uppercase tracking-tighter">
-                      {index + 1}. <EntityText>{item.title}</EntityText>
+                      {index + 1}. {item.title}
                     </h3>
                     <p className="mt-2 max-w-2xl text-base leading-relaxed text-zinc-600">
-                      <EntityText>{item.body}</EntityText>
+                      {item.body}
                     </p>
                   </li>
                 ))}
@@ -266,13 +228,13 @@ function AppShell({ article, entities }: StoryProps) {
                 <div className="grid lg:grid-cols-2">
                   <div className="border-b-8 border-white/10 p-8 lg:border-b-0 lg:border-r-8">
                     <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-500">
-                      <EntityText>{article.protectEyebrow}</EntityText>
+                      {article.protectEyebrow}
                     </p>
                     <h2 className="mt-3 text-3xl font-black uppercase leading-none tracking-tighter">
-                      <EntityText>{article.protectHeading}</EntityText>
+                      {article.protectHeading}
                     </h2>
                     <p className="mt-4 text-sm leading-relaxed text-zinc-300 md:text-base">
-                      <EntityText>{article.protectBlurb}</EntityText>
+                      {article.protectBlurb}
                     </p>
                     <div className="relative mt-6 aspect-video overflow-hidden border-4 border-zinc-700">
                       <img
@@ -298,10 +260,10 @@ function AppShell({ article, entities }: StoryProps) {
                           </span>
                           <div>
                             <p className="font-black uppercase tracking-tight text-white">
-                              <EntityText>{tip.title}</EntityText>
+                              {tip.title}
                             </p>
                             <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-                              <EntityText>{tip.text}</EntityText>
+                              {tip.text}
                             </p>
                           </div>
                         </li>
@@ -323,13 +285,13 @@ function AppShell({ article, entities }: StoryProps) {
             {/* Bottom line */}
             <section className="mt-16 border-4 border-black p-6 md:p-10">
               <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-600">
-                <EntityText>{article.bottomLineEyebrow}</EntityText>
+                {article.bottomLineEyebrow}
               </p>
               <h2 className="mt-2 text-2xl font-black uppercase tracking-tighter md:text-3xl">
-                <EntityText>{article.bottomLineHeading}</EntityText>
+                {article.bottomLineHeading}
               </h2>
               <p className="mt-4 text-base leading-relaxed text-zinc-700 md:text-lg">
-                <EntityText>{article.bottomLineBody}</EntityText>
+                {article.bottomLineBody}
               </p>
               <a
                 href="https://reportfraud.ftc.gov/"
@@ -357,10 +319,10 @@ function AppShell({ article, entities }: StoryProps) {
                     className="grid grid-cols-[0.9fr_1.1fr] gap-2 px-4 py-3"
                   >
                     <dt className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                      <EntityText>{fact.label}</EntityText>
+                      {fact.label}
                     </dt>
                     <dd className="text-sm font-bold leading-snug text-zinc-900">
-                      <EntityText>{fact.value}</EntityText>
+                      {fact.value}
                     </dd>
                   </div>
                 ))}
@@ -369,13 +331,13 @@ function AppShell({ article, entities }: StoryProps) {
 
             <div className="border-4 border-black bg-red-600 p-5 text-white">
               <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/80">
-                <EntityText>{article.guidanceEyebrow}</EntityText>
+                {article.guidanceEyebrow}
               </p>
               <p className="mt-2 text-2xl font-black uppercase leading-none tracking-tighter">
-                <EntityText>{article.guidanceHeading}</EntityText>
+                {article.guidanceHeading}
               </p>
               <p className="mt-3 text-sm leading-relaxed text-white/90">
-                <EntityText>{article.guidanceBlurb}</EntityText>
+                {article.guidanceBlurb}
               </p>
               <a
                 href="https://reportfraud.ftc.gov/"
@@ -398,7 +360,7 @@ function AppShell({ article, entities }: StoryProps) {
                   Why it matters
                 </p>
                 <p className="mt-2 text-lg font-black uppercase leading-tight tracking-tight">
-                  <EntityText>{article.whyItMatters}</EntityText>
+                  {article.whyItMatters}
                 </p>
               </div>
             </div>
@@ -416,13 +378,13 @@ function AppShell({ article, entities }: StoryProps) {
                     className="group cursor-pointer p-4 transition hover:bg-zinc-50"
                   >
                     <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-600">
-                      <EntityText>{story.tag}</EntityText>
+                      {story.tag}
                     </p>
                     <p className="mt-1 font-bold leading-snug text-zinc-900 group-hover:underline">
-                      <EntityText>{story.title}</EntityText>
+                      {story.title}
                     </p>
                     <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                      <EntityText>{story.time}</EntityText> read
+                      {story.time} read
                     </p>
                   </li>
                 ))}
@@ -437,7 +399,7 @@ function AppShell({ article, entities }: StoryProps) {
                 {article.scopeItems.map((item) => (
                   <li key={item} className="flex gap-2">
                     <span className="mt-1.5 h-2 w-2 shrink-0 bg-red-600" />
-                    <EntityText>{item}</EntityText>
+                    {item}
                   </li>
                 ))}
               </ul>
@@ -450,13 +412,13 @@ function AppShell({ article, entities }: StoryProps) {
           <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-4 py-10 md:flex-row md:items-center">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-600">
-                <EntityText>{article.newsletterKicker}</EntityText>
+                {article.newsletterKicker}
               </p>
               <h2 className="mt-2 text-3xl font-black uppercase tracking-tighter text-zinc-900">
-                <EntityText>{article.newsletterHeading}</EntityText>
+                {article.newsletterHeading}
               </h2>
               <p className="mt-2 max-w-xl text-sm font-medium text-zinc-600">
-                <EntityText>{article.newsletterBlurb}</EntityText>
+                {article.newsletterBlurb}
               </p>
             </div>
             <form
@@ -515,14 +477,5 @@ function AppShell({ article, entities }: StoryProps) {
 
       <Footer />
     </div>
-  );
-}
-
-export default function App() {
-  const { article, entities } = useStoryContent();
-  return (
-    <EntityProvider entities={entities}>
-      <AppShell article={article} entities={entities} />
-    </EntityProvider>
   );
 }

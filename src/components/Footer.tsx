@@ -1,5 +1,3 @@
-import { EntityText } from "../sanity/EntityText";
-
 export default function Footer() {
   return (
     <footer className="border-t-8 border-black bg-zinc-900 text-zinc-300">
@@ -14,12 +12,10 @@ export default function Footer() {
             </p>
           </div>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-zinc-400">
-            <EntityText>
-              Live markets and cybersecurity coverage. This briefing covers the
-              reported Edward Jones compromise in Louisiana, Iranian-linked
-              actors, advisor Beau Wilson under investigation, and losses
-              upwards of $1.3 billion.
-            </EntityText>
+            Live markets and cybersecurity coverage. This briefing covers the
+            reported Edward Jones compromise in Louisiana, Iranian-linked actors,
+            advisor Beau Wilson under investigation, and losses upwards of $1.3
+            billion.
           </p>
         </div>
         <div>
@@ -30,9 +26,7 @@ export default function Footer() {
             <li>Markets</li>
             <li>Cybersecurity</li>
             <li>Business</li>
-            <li>
-              <EntityText>Louisiana</EntityText>
-            </li>
+            <li>Louisiana</li>
           </ul>
         </div>
         <div>
@@ -41,12 +35,8 @@ export default function Footer() {
           </p>
           <ul className="mt-3 space-y-2 text-sm font-medium">
             <li>FTC — reportfraud.ftc.gov</li>
-            <li>
-              <EntityText>Do not contact Beau Wilson or advisors</EntityText>
-            </li>
-            <li>
-              <EntityText>Louisiana branches under audit</EntityText>
-            </li>
+            <li>Do not contact Beau Wilson or advisors</li>
+            <li>Louisiana branches under audit</li>
             <li>Keep call logs and wire records</li>
           </ul>
         </div>
