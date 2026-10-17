@@ -15,6 +15,8 @@ export type StaticArticle = {
   kicker: string;
   title: string;
   dek: string;
+  seoTitle?: string;
+  seoDescription?: string;
   byline: string;
   published: string;
   updated: string;

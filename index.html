@@ -11,6 +11,13 @@
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      Filled in by the netlify edge function before this page is served, so the
+      very first React render already has the live CMS content. Left as the
+      literal null it ships with, src/sanity/useStoryContent.ts falls back to
+      the bundled article -- which is what you get under plain `vite dev`.
+    -->
+    <script id="cms-content" type="application/json">null</script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

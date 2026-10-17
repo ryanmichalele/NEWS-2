@@ -1,18 +1,48 @@
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Turnstile from "./components/Turnstile";
 import { TURNSTILE_SITE_KEY } from "./config";
 import heroArrest from "./assets/hero-arrest.jpg";
-import { staticArticle } from "@/data/fallback";
+import { EntityProvider, EntityText } from "./sanity/EntityText";
+import { useStoryContent } from "./sanity/useStoryContent";
+import { resolveEntities } from "./sanity/resolveEntities";
+import type { StaticArticle } from "@/data/fallback";
+import type { EntityMap } from "./sanity/resolveEntities";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-export default function App() {
-  const article = staticArticle;
+type StoryProps = {
+  article: StaticArticle;
+  entities: EntityMap;
+};
+
+/**
+ * `article` and `entities` arrive as props from the single useStoryContent()
+ * call in App. Calling the hook here as well used to start a second, entirely
+ * independent poll loop -- two timers, two fetches, and two copies of the
+ * entity map that could disagree mid-edit.
+ */
+function AppShell({ article, entities }: StoryProps) {
   const [email, setEmail] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [status, setStatus] = useState<Status>("idle");
+
+  // Layout effect, not a normal effect: this runs after the commit but before
+  // the browser paints, so the tab title is never briefly wrong. In production
+  // the edge function has already written the correct title into the HTML and
+  // this compares equal and does nothing -- it matters on the fallback path.
+  useLayoutEffect(() => {
+    const title = article.seoTitle?.trim() || `CWN Live - ${article.title}`;
+    const nextTitle = resolveEntities(title, entities);
+    if (document.title !== nextTitle) document.title = nextTitle;
+    const desc = article.seoDescription?.trim() || article.dek;
+    const nextDesc = resolveEntities(desc, entities);
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta && meta.getAttribute("content") !== nextDesc) {
+      meta.setAttribute("content", nextDesc);
+    }
+  }, [article, entities]);
 
   const doubledTicker = [...article.tickerItems, ...article.tickerItems];
 
@@ -56,7 +86,7 @@ export default function App() {
             <div className="animate-marquee flex w-max gap-12 whitespace-nowrap text-xs font-bold uppercase tracking-widest">
               {doubledTicker.map((item, i) => (
                 <span key={`${item}-${i}`} className="flex items-center gap-12">
-                  {item}
+                  <EntityText>{item}</EntityText>
                   <span className="text-white/50">//</span>
                 </span>
               ))}
@@ -70,20 +100,28 @@ export default function App() {
         <section id="report" className="border-b-8 border-black">
           <div className="mx-auto max-w-7xl px-4 py-8 md:py-12">
             <div className="mb-4 flex flex-wrap items-center gap-3 text-[10px] font-black uppercase tracking-[0.35em]">
-              <span className="bg-red-600 px-2 py-1 text-white">{article.kicker}</span>
-              <span className="text-zinc-500">{article.section}</span>
+              <span className="bg-red-600 px-2 py-1 text-white">
+                <EntityText>{article.kicker}</EntityText>
+              </span>
+              <span className="text-zinc-500">
+                <EntityText>{article.section}</EntityText>
+              </span>
               <span className="text-zinc-300">|</span>
-              <span className="text-zinc-500">{article.location}</span>
+              <span className="text-zinc-500">
+                <EntityText>{article.location}</EntityText>
+              </span>
               <span className="text-zinc-300">|</span>
-              <span className="text-zinc-500">{article.readTime}</span>
+              <span className="text-zinc-500">
+                <EntityText>{article.readTime}</EntityText>
+              </span>
             </div>
 
             <h1 className="max-w-5xl text-4xl font-black uppercase leading-[0.95] tracking-tighter text-zinc-900 md:text-6xl lg:text-7xl">
-              {article.title}
+              <EntityText>{article.title}</EntityText>
             </h1>
 
             <p className="mt-6 max-w-3xl text-lg font-medium leading-relaxed text-zinc-600 md:text-2xl">
-              {article.dek}
+              <EntityText>{article.dek}</EntityText>
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-t-4 border-black pt-4 text-xs font-bold uppercase tracking-widest text-zinc-600">
@@ -92,11 +130,11 @@ export default function App() {
               </p>
               <span className="text-zinc-300">|</span>
               <p>
-                Published {article.published}
+                Published <EntityText>{article.published}</EntityText>
               </p>
               <span className="text-zinc-300">|</span>
               <p>
-                Updated {article.updated}
+                Updated <EntityText>{article.updated}</EntityText>
               </p>
             </div>
 
@@ -112,7 +150,7 @@ export default function App() {
                 <div className="scanlines absolute inset-0 opacity-40" />
                 <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-2 p-4 md:flex-row md:items-end md:justify-between md:p-6">
                   <p className="max-w-2xl text-sm font-medium text-white md:text-base">
-                    {article.heroCaption}
+                    <EntityText>{article.heroCaption}</EntityText>
                   </p>
                   <div className="flex items-center gap-2 self-start bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.35em] text-white">
                     <span className="h-2 w-2 rounded-full bg-white live-glow" />
@@ -132,10 +170,10 @@ export default function App() {
                   } ${i < 2 ? "border-b-4 border-black md:border-b-0" : ""} border-black`}
                 >
                   <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-600">
-                    {stat.k}
+                    <EntityText>{stat.k}</EntityText>
                   </p>
                   <p className="mt-1 text-xl font-black uppercase tracking-tighter md:text-2xl">
-                    {stat.v}
+                    <EntityText>{stat.v}</EntityText>
                   </p>
                 </div>
               ))}
@@ -151,7 +189,7 @@ export default function App() {
                 Editor’s note
               </p>
               <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-700 md:text-base">
-                {article.editorNote}
+                <EntityText>{article.editorNote}</EntityText>
               </p>
             </div>
 
@@ -159,7 +197,7 @@ export default function App() {
               {article.bodySections.map((section, idx) => (
                 <section key={section.heading} id={idx === 0 ? "story" : undefined}>
                   <h2 className="border-b-4 border-black pb-3 text-2xl font-black uppercase tracking-tighter md:text-3xl">
-                    {section.heading}
+                    <EntityText>{section.heading}</EntityText>
                   </h2>
                   <div className="mt-6 space-y-5 text-base leading-relaxed text-zinc-700 md:text-lg">
                     {section.paragraphs.map((paragraph, pIdx) => (
@@ -167,7 +205,7 @@ export default function App() {
                         key={paragraph.slice(0, 40)}
                         className={idx === 0 && pIdx === 0 ? "drop-cap" : ""}
                       >
-                        {paragraph}
+                        <EntityText>{paragraph}</EntityText>
                       </p>
                     ))}
                   </div>
@@ -183,10 +221,10 @@ export default function App() {
                   className="border-l-8 border-red-600 bg-zinc-100 p-6 md:p-8"
                 >
                   <p className="text-xl font-black leading-tight tracking-tight text-zinc-900 md:text-2xl">
-                    “{quote.text}”
+                    “<EntityText>{quote.text}</EntityText>”
                   </p>
                   <footer className="mt-4 text-[10px] font-black uppercase tracking-[0.35em] text-zinc-500">
-                    — {quote.source}
+                    — <EntityText>{quote.source}</EntityText>
                   </footer>
                 </blockquote>
               ))}
@@ -197,10 +235,10 @@ export default function App() {
               <div className="mb-8 flex items-end justify-between gap-4 border-b-8 border-black pb-4">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-600">
-                    {article.timelineKicker}
+                    <EntityText>{article.timelineKicker}</EntityText>
                   </p>
                   <h2 className="mt-2 text-3xl font-black uppercase tracking-tighter md:text-4xl">
-                    {article.timelineHeading}
+                    <EntityText>{article.timelineHeading}</EntityText>
                   </h2>
                 </div>
               </div>
@@ -209,13 +247,13 @@ export default function App() {
                   <li key={item.title} className="relative pb-10 last:pb-0">
                     <span className="absolute -left-[42px] top-1 flex h-5 w-5 items-center justify-center rounded-full border-4 border-black bg-red-600" />
                     <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-600">
-                      {item.date}
+                      <EntityText>{item.date}</EntityText>
                     </p>
                     <h3 className="mt-1 text-xl font-black uppercase tracking-tighter">
-                      {index + 1}. {item.title}
+                      {index + 1}. <EntityText>{item.title}</EntityText>
                     </h3>
                     <p className="mt-2 max-w-2xl text-base leading-relaxed text-zinc-600">
-                      {item.body}
+                      <EntityText>{item.body}</EntityText>
                     </p>
                   </li>
                 ))}
@@ -228,13 +266,13 @@ export default function App() {
                 <div className="grid lg:grid-cols-2">
                   <div className="border-b-8 border-white/10 p-8 lg:border-b-0 lg:border-r-8">
                     <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-500">
-                      {article.protectEyebrow}
+                      <EntityText>{article.protectEyebrow}</EntityText>
                     </p>
                     <h2 className="mt-3 text-3xl font-black uppercase leading-none tracking-tighter">
-                      {article.protectHeading}
+                      <EntityText>{article.protectHeading}</EntityText>
                     </h2>
                     <p className="mt-4 text-sm leading-relaxed text-zinc-300 md:text-base">
-                      {article.protectBlurb}
+                      <EntityText>{article.protectBlurb}</EntityText>
                     </p>
                     <div className="relative mt-6 aspect-video overflow-hidden border-4 border-zinc-700">
                       <img
@@ -260,10 +298,10 @@ export default function App() {
                           </span>
                           <div>
                             <p className="font-black uppercase tracking-tight text-white">
-                              {tip.title}
+                              <EntityText>{tip.title}</EntityText>
                             </p>
                             <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-                              {tip.text}
+                              <EntityText>{tip.text}</EntityText>
                             </p>
                           </div>
                         </li>
@@ -285,13 +323,13 @@ export default function App() {
             {/* Bottom line */}
             <section className="mt-16 border-4 border-black p-6 md:p-10">
               <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-600">
-                {article.bottomLineEyebrow}
+                <EntityText>{article.bottomLineEyebrow}</EntityText>
               </p>
               <h2 className="mt-2 text-2xl font-black uppercase tracking-tighter md:text-3xl">
-                {article.bottomLineHeading}
+                <EntityText>{article.bottomLineHeading}</EntityText>
               </h2>
               <p className="mt-4 text-base leading-relaxed text-zinc-700 md:text-lg">
-                {article.bottomLineBody}
+                <EntityText>{article.bottomLineBody}</EntityText>
               </p>
               <a
                 href="https://reportfraud.ftc.gov/"
@@ -319,10 +357,10 @@ export default function App() {
                     className="grid grid-cols-[0.9fr_1.1fr] gap-2 px-4 py-3"
                   >
                     <dt className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                      {fact.label}
+                      <EntityText>{fact.label}</EntityText>
                     </dt>
                     <dd className="text-sm font-bold leading-snug text-zinc-900">
-                      {fact.value}
+                      <EntityText>{fact.value}</EntityText>
                     </dd>
                   </div>
                 ))}
@@ -331,13 +369,13 @@ export default function App() {
 
             <div className="border-4 border-black bg-red-600 p-5 text-white">
               <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/80">
-                {article.guidanceEyebrow}
+                <EntityText>{article.guidanceEyebrow}</EntityText>
               </p>
               <p className="mt-2 text-2xl font-black uppercase leading-none tracking-tighter">
-                {article.guidanceHeading}
+                <EntityText>{article.guidanceHeading}</EntityText>
               </p>
               <p className="mt-3 text-sm leading-relaxed text-white/90">
-                {article.guidanceBlurb}
+                <EntityText>{article.guidanceBlurb}</EntityText>
               </p>
               <a
                 href="https://reportfraud.ftc.gov/"
@@ -360,7 +398,7 @@ export default function App() {
                   Why it matters
                 </p>
                 <p className="mt-2 text-lg font-black uppercase leading-tight tracking-tight">
-                  {article.whyItMatters}
+                  <EntityText>{article.whyItMatters}</EntityText>
                 </p>
               </div>
             </div>
@@ -378,13 +416,13 @@ export default function App() {
                     className="group cursor-pointer p-4 transition hover:bg-zinc-50"
                   >
                     <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-600">
-                      {story.tag}
+                      <EntityText>{story.tag}</EntityText>
                     </p>
                     <p className="mt-1 font-bold leading-snug text-zinc-900 group-hover:underline">
-                      {story.title}
+                      <EntityText>{story.title}</EntityText>
                     </p>
                     <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                      {story.time} read
+                      <EntityText>{story.time}</EntityText> read
                     </p>
                   </li>
                 ))}
@@ -399,7 +437,7 @@ export default function App() {
                 {article.scopeItems.map((item) => (
                   <li key={item} className="flex gap-2">
                     <span className="mt-1.5 h-2 w-2 shrink-0 bg-red-600" />
-                    {item}
+                    <EntityText>{item}</EntityText>
                   </li>
                 ))}
               </ul>
@@ -412,13 +450,13 @@ export default function App() {
           <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-4 py-10 md:flex-row md:items-center">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-600">
-                {article.newsletterKicker}
+                <EntityText>{article.newsletterKicker}</EntityText>
               </p>
               <h2 className="mt-2 text-3xl font-black uppercase tracking-tighter text-zinc-900">
-                {article.newsletterHeading}
+                <EntityText>{article.newsletterHeading}</EntityText>
               </h2>
               <p className="mt-2 max-w-xl text-sm font-medium text-zinc-600">
-                {article.newsletterBlurb}
+                <EntityText>{article.newsletterBlurb}</EntityText>
               </p>
             </div>
             <form
@@ -477,5 +515,14 @@ export default function App() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function App() {
+  const { article, entities } = useStoryContent();
+  return (
+    <EntityProvider entities={entities}>
+      <AppShell article={article} entities={entities} />
+    </EntityProvider>
   );
 }
